@@ -1,0 +1,23 @@
+{
+    "exchange": {
+        "key": "YOUR_BINANCE_API_KEY",
+        "secret": "YOUR_BINANCE_API_SECRET"
+    },
+    "telegram": {
+        "enabled": false,
+        "token": "YOUR_TELEGRAM_BOT_TOKEN",
+        "chat_id": "YOUR_TELEGRAM_CHAT_ID"
+    },
+    "api_server": {
+        "enabled": true,
+        "listen_ip_address": "127.0.0.1",
+        "listen_port": 8080,
+        "verbosity": "error",
+        "enable_openapi": false,
+        "CORS_origins": [],
+        "jwt_secret_key": "CHANGE_ME_TO_A_LONG_RANDOM_STRING",
+        "ws_token": "CHANGE_ME_TO_ANOTHER_RANDOM_STRING",
+        "username": "admin",
+        "password": "CHANGE_ME"
+    }
+}

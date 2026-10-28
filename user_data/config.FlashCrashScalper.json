@@ -1,0 +1,8 @@
+{
+    "bot_name": "flash-crash-scalper",
+    "max_open_trades": 20,
+    "available_capital": 200,
+    "api_server": {
+        "listen_port": 8082
+    }
+}
