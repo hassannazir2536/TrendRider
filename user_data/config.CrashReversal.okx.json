@@ -1,0 +1,4 @@
+{
+    "bot_name": "crash-reversal-okx",
+    "api_server": { "listen_port": 8091 }
+}

@@ -1,0 +1,13 @@
+{
+    "exchange": {
+        "name": "okx",
+        "key": "",
+        "secret": "",
+        "password": "",
+        "ccxt_config": {
+            "timeout": 30000,
+            "options": { "fetchMarkets": { "types": ["spot"] } }
+        }
+    },
+    "fee": 0.001
+}

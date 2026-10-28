@@ -1,37 +1,53 @@
-# Trades one strategy with REAL money on Binance. Paper trade first (scripts\paper-trade.ps1).
+# Trades one strategy with REAL money. Paper trade first (scripts\paper-trade.ps1).
 #
-#   scripts\live-trade.ps1                                 # TrendRider
+#   scripts\live-trade.ps1                                   # TrendRider on Binance
 #   scripts\live-trade.ps1 -Strategy FlashCrashScalper
+#   scripts\live-trade.ps1 -Exchange okx                     # TrendRider on OKX
 #
-# Each strategy is its own bot with its own capital: "available_capital" in
-# user_data\config.<Strategy>.json is the most USDT that bot may use. If you run several
-# bots at once, the sum of their available_capital must not exceed your USDT balance.
-param([string]$Strategy = "TrendRider")
+# Each bot has its own capital: "available_capital" in user_data\config.<Strategy>.json
+# (or config.<Strategy>.okx.json for OKX) is the most USDT that bot may use. If you run
+# several bots on one exchange, the sum of their available_capital must not exceed your
+# USDT balance there.
+param(
+    [string]$Strategy = "TrendRider",
+    [ValidateSet("binance", "okx")][string]$Exchange = "binance"
+)
 
 $ErrorActionPreference = "Stop"
 Set-Location (Join-Path $PSScriptRoot "..")
+. "$PSScriptRoot\common.ps1"
 
-$private = "user_data/config.private.json"
-if (-not (Test-Path $private)) {
-    throw "Missing $private. Run scripts\set-binance-key.ps1 first."
+if ($Exchange -eq "binance") {
+    $keyFile = "user_data/config.private.json"
+    $setup = "scripts\set-binance-key.ps1"
+    $fields = @("key", "secret")
+} else {
+    $keyFile = "user_data/config.private.$Exchange.json"
+    $setup = "scripts\set-$Exchange-key.ps1"
+    $fields = @("key", "secret", "password")
 }
-$exchange = (Get-Content $private -Raw | ConvertFrom-Json).exchange
-if (-not $exchange.key -or $exchange.key -like "YOUR_*" -or -not $exchange.secret -or $exchange.secret -like "YOUR_*") {
-    throw "Binance API key/secret are not set in $private. Run scripts\set-binance-key.ps1."
+if (-not (Test-Path $keyFile)) {
+    throw "Missing $keyFile. Run $setup first."
+}
+$keys = (Get-Content $keyFile -Raw | ConvertFrom-Json).exchange
+foreach ($field in $fields) {
+    $value = $keys.$field
+    if (-not $value -or $value -like "YOUR_*") {
+        throw "The $Exchange API $field is not set in $keyFile. Run $setup."
+    }
 }
 
-$strategyConfig = "user_data/config.$Strategy.json"
-if (-not (Test-Path $strategyConfig)) {
-    throw "Missing $strategyConfig. Create it with at least {""available_capital"": <USDT this strategy may use>}."
+if (-not (Test-Path "user_data/config.$Strategy.json")) {
+    throw "Missing user_data/config.$Strategy.json. Create it with at least {""available_capital"": <USDT this strategy may use>}."
 }
-$capital = (Get-Content $strategyConfig -Raw | ConvertFrom-Json).available_capital
+$capital = Get-Capital -Strategy $Strategy -Exchange $Exchange
 if (-not $capital) {
-    throw "available_capital is not set in $strategyConfig."
+    throw "available_capital is not set for $Strategy."
 }
 
 Write-Host ""
 Write-Host "LIVE TRADING with real money." -ForegroundColor Red
-Write-Host "Strategy: $Strategy | Capital this bot may use: $capital USDT" -ForegroundColor Yellow
+Write-Host "Strategy: $Strategy | Exchange: $Exchange | Capital this bot may use: $capital USDT" -ForegroundColor Yellow
 Write-Host "Losses are possible. Past results do not guarantee future profits." -ForegroundColor Yellow
 $answer = Read-Host "Type LIVE to start"
 if ($answer -cne "LIVE") {
@@ -39,10 +55,9 @@ if ($answer -cne "LIVE") {
     exit 1
 }
 
-& .\.venv\Scripts\freqtrade.exe trade --userdir user_data `
-    --config user_data/config.json `
-    --config $private `
-    --config $strategyConfig `
-    --config user_data/config.live.json `
+$configs = Get-ConfigArgs -Strategy $Strategy -Exchange $Exchange -Secrets
+$configs += @("--config", "user_data/config.live.json")
+
+& .\.venv\Scripts\freqtrade.exe trade --userdir user_data @configs `
     --strategy $Strategy `
-    --db-url "sqlite:///user_data/tradesv3.live.$Strategy.sqlite"
+    --db-url (Get-DbUrl -Strategy $Strategy -Exchange $Exchange -Live)

@@ -1,0 +1,8 @@
+{
+    "exchange": {
+        "name": "okx",
+        "key": "YOUR_OKX_API_KEY",
+        "secret": "YOUR_OKX_SECRET_KEY",
+        "password": "YOUR_OKX_PASSPHRASE"
+    }
+}

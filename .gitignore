@@ -3,7 +3,8 @@ __pycache__/
 *.pyc
 
 # Secrets - never commit
-user_data/config.private.json
+user_data/config.private*.json
+!user_data/config.private*.example.json
 .env
 
 # Generated / large

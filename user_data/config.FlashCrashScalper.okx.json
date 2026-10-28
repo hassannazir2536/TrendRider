@@ -1,0 +1,4 @@
+{
+    "bot_name": "flash-crash-scalper-okx",
+    "api_server": { "listen_port": 8092 }
+}

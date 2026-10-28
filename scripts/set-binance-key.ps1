@@ -16,43 +16,24 @@ if ($PrivateKeyFile) {
     $PrivateKeyFile = (Resolve-Path -LiteralPath $PrivateKeyFile).Path
 }
 Set-Location (Join-Path $PSScriptRoot "..")
+. "$PSScriptRoot\common.ps1"
 
-$path = Join-Path (Get-Location) "user_data\config.private.json"
-if (-not (Test-Path $path)) {
-    Copy-Item "user_data\config.private.example.json" $path
-}
-$cfg = Get-Content $path -Raw | ConvertFrom-Json
-
-$cfg.exchange.key = (Read-Host "Binance API Key").Trim()
+$cfg = Read-PrivateConfig
+$key = (Read-Host "Binance API Key").Trim()
 if ($PrivateKeyFile) {
     $secret = (Get-Content -LiteralPath $PrivateKeyFile -Raw).Trim() -replace "`r`n", "`n"
     if ($secret -notmatch "PRIVATE KEY") {
         throw "$PrivateKeyFile does not look like a private key file (expected '-----BEGIN PRIVATE KEY-----')."
     }
 } else {
-    $secure = Read-Host "Binance Secret Key" -AsSecureString
-    $secret = [System.Net.NetworkCredential]::new("", $secure).Password.Trim()
+    $secret = Read-SecretText "Binance Secret Key"
 }
-$cfg.exchange.secret = $secret
+# The exchange block may be missing if only an OKX key was set up so far.
+$cfg | Add-Member -NotePropertyName exchange -NotePropertyValue ([pscustomobject]@{ key = $key; secret = $secret }) -Force
 
-function New-Token([int]$Bytes) {
-    $buffer = New-Object byte[] $Bytes
-    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($buffer)
-    return [Convert]::ToBase64String($buffer) -replace "[+/=]", ""
-}
-
-# Replace the dashboard's placeholder secrets with random ones, once.
-if ($cfg.api_server.password -like "CHANGE_ME*") {
-    $cfg.api_server.jwt_secret_key = New-Token 48
-    $cfg.api_server.ws_token = New-Token 24
-    $cfg.api_server.password = New-Token 12
-    Write-Host "Dashboard login (http://127.0.0.1:8080): $($cfg.api_server.username) / $($cfg.api_server.password)" -ForegroundColor Cyan
-    Write-Host "Save this password somewhere safe. It is also in $path." -ForegroundColor Cyan
-}
-
-# Freqtrade cannot read files with a UTF-8 byte-order mark, so write without one.
-$json = $cfg | ConvertTo-Json -Depth 5
-[System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
+$null = Set-DashboardSecrets $cfg
+$path = Join-Path (Get-Location) "user_data\config.private.json"
+Save-Json $cfg $path
 Write-Host "Saved to $path"
 Write-Host ""
 

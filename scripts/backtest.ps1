@@ -1,27 +1,26 @@
-# Backtests a strategy on downloaded history, with Binance's 0.1% fee per side.
-# Uses the strategy's own settings from user_data\config.<Strategy>.json when present,
-# and sizes the simulated wallet to that file's available_capital so results reflect the
-# money the bot would really trade with (small slices below Binance's 5 USDT minimum are skipped).
+# Backtests a strategy on downloaded history, with a 0.1% fee per side (Binance and OKX
+# regular rate). Uses the strategy's own settings from user_data\config.<Strategy>.json and
+# sizes the simulated wallet to its available_capital, so results reflect the money the bot
+# would really trade with (slices below the exchange minimum are skipped).
 #
-#   scripts\backtest.ps1                                            # TrendRider, Mar 2024 to now
+#   scripts\backtest.ps1                                            # TrendRider on Binance data, Mar 2024 to now
 #   scripts\backtest.ps1 -Strategy FlashCrashScalper -Timerange 20260101-
 #   scripts\backtest.ps1 -Capital 1000                              # pretend you had 1000 USDT
+#   scripts\backtest.ps1 -Exchange okx                              # OKX data (run update-data.ps1 -Exchange okx first)
 param(
     [string]$Strategy = "TrendRider",
     [string]$Timerange = "20240301-",
-    [double]$Capital = 0
+    [double]$Capital = 0,
+    [ValidateSet("binance", "okx")][string]$Exchange = "binance"
 )
 
 $ErrorActionPreference = "Stop"
 Set-Location (Join-Path $PSScriptRoot "..")
+. "$PSScriptRoot\common.ps1"
 
-$configs = @("--config", "user_data/config.json")
-$strategyConfig = "user_data/config.$Strategy.json"
-if (Test-Path $strategyConfig) {
-    $configs += @("--config", $strategyConfig)
-    if ($Capital -le 0) {
-        $Capital = (Get-Content $strategyConfig -Raw | ConvertFrom-Json).available_capital
-    }
+$configs = Get-ConfigArgs -Strategy $Strategy -Exchange $Exchange
+if ($Capital -le 0) {
+    $Capital = Get-Capital -Strategy $Strategy -Exchange $Exchange
 }
 
 $extra = @()

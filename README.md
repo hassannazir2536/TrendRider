@@ -1,6 +1,6 @@
 # Analyzer & Trader
 
-Automated Binance **spot** trading bots built on [Freqtrade](https://www.freqtrade.io) 2026.9.
+Automated **spot** trading bots for **Binance** and **OKX**, built on [Freqtrade](https://www.freqtrade.io) 2026.9.
 The main bot trades BTC and ETH by default and can be widened to 20 large coins. No leverage, no shorting.
 
 > **Risk warning:** No strategy is guaranteed to make money. Backtests describe the past,
@@ -15,8 +15,9 @@ The main bot trades BTC and ETH by default and can be widened to 20 large coins.
 | **FlashCrashScalper** | Buys a coin that fell >5% in 2h, sells 6h later (5-minute candles). | **Experimental.** Paper trading only. |
 
 Each strategy runs as its own bot with its own capital, dashboard port and settings file
-(`user_data/config.<Strategy>.json`). All three keep a stop-loss order on Binance so positions
-stay protected if your PC goes offline.
+(`user_data/config.<Strategy>.json`), on Binance by default or on OKX with `-Exchange okx`. You can
+run the same strategy on both exchanges at once; they are separate bots with separate money.
+All three keep a stop-loss order on the exchange so positions stay protected if your PC goes offline.
 
 **Coins:** BTC, ETH, XRP, SOL, DOGE, TRX, ADA, LINK, SUI, AVAX, BCH, LTC, NEAR, DOT, UNI, AAVE, APT, ARB, INJ, ATOM
 (all against USDT; the list is `pair_whitelist` in `user_data/config.json`).
@@ -36,6 +37,10 @@ looked at while designing the strategies.
 | All 20, tiered slices (needs ~300 USDT) | +31% | +9% | −28% / −21% | −13% / −5% |
 
 Tiered slices: BTC 25%, ETH 15%, each other coin 3.3% (set with `pair_weights`, see "Capital" below).
+
+**On OKX prices** the default BTC + ETH bot made the same 50 trades: +57.7% and +19.6%, with
+drawdowns within 0.2 points of Binance. Both exchanges charge 0.1% per side at the regular tier,
+and their BTC and ETH prices move together, so the exchange does not change the result.
 
 Honest reading: in this period altcoins were weak, so adding them **lowered** returns compared with
 BTC+ETH alone, even though the rule beat buy-and-hold on 15–17 of the 20 coins. The 20-coin version
@@ -89,14 +94,20 @@ cd /d "C:\path\to\TrendRider"
 powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1
 powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1 -Strategy CrashReversal
 powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1 -Strategy FlashCrashScalper
+powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1 -Exchange okx
 ```
 
 After changing any config file, stop the bot with `Ctrl+C` and start it again so it picks up the change.
 
 Dashboards (login is the `api_server` username/password in `config.private.json`):
-TrendRider http://127.0.0.1:8080, CrashReversal http://127.0.0.1:8081, FlashCrashScalper http://127.0.0.1:8082.
 
-Paper results are kept in `user_data\tradesv3.dryrun*.sqlite`. Run for **at least 2–4 weeks**
+| Strategy | Binance | OKX |
+|---|---|---|
+| TrendRider | http://127.0.0.1:8080 | http://127.0.0.1:8090 |
+| CrashReversal | http://127.0.0.1:8081 | http://127.0.0.1:8091 |
+| FlashCrashScalper | http://127.0.0.1:8082 | http://127.0.0.1:8092 |
+
+Paper results are kept in `user_data\tradesv3.dryrun*.sqlite`, with `.okx` in the name for OKX bots. Run for **at least 2–4 weeks**
 (the crash strategies need months, since they only trade in crashes) and compare with the backtests.
 
 > The bots only trade while your PC is awake and online. Set Windows sleep to "Never" while they
@@ -118,6 +129,11 @@ below ~5–10 USDT, so slices smaller than that are skipped automatically.
 If you run several bots at once, the sum of their `available_capital` must not exceed your USDT balance.
 With 100 USDT, run **TrendRider only**: the crash bots cannot trade with less than ~200 USDT.
 
+Binance and OKX are separate wallets. An OKX bot uses the same `available_capital` as its Binance
+twin unless you set a different one in `user_data/config.<Strategy>.okx.json`, for example
+`"available_capital": 50`. Running TrendRider on both exchanges doubles your exposure to the same two
+coins; it is not diversification. Pick one exchange unless you have a reason to use both.
+
 If a slice is too small, TrendRider pauses that coin until the next hour and logs once:
 `NEAR/USDT: buy signal skipped, slice 3.33 USDT < Binance minimum 6.18 USDT`.
 
@@ -133,7 +149,7 @@ If a slice is too small, TrendRider pauses that coin until the next hour and log
 }
 ```
 
-## Going live with real money
+## Going live with real money: Binance
 
 1. Create a Binance API key (Profile → API Management → Create API). Binance offers two types:
    - **System generated (HMAC):** Binance shows an API Key **and** a Secret Key (shown once).
@@ -161,6 +177,40 @@ If a slice is too small, TrendRider pauses that coin until the next hour and log
 
 Live trades are kept in `user_data\tradesv3.live.<Strategy>.sqlite`, separate from paper trading.
 
+## Going live with real money: OKX
+
+1. Create an OKX API key (Profile → API → Create V5 API key). Choose a **passphrase** yourself and
+   write it down; OKX shows the Secret Key only once. Permissions: **Read** and **Trade** only,
+   **never Withdraw**. Bind it to **your IP address**: OKX deletes trade keys without an IP binding
+   after 14 days without use.
+2. Save the key by running the helper **yourself**. It asks for the API Key, Secret Key and passphrase:
+
+   ```cmd
+   powershell -ExecutionPolicy Bypass -File scripts\set-okx-key.ps1
+   powershell -ExecutionPolicy Bypass -File scripts\set-okx-key.ps1 -Eea
+   ```
+
+   Use `-Eea` only if your account is on my.okx.com (OKX Europe); the two sites have separate keys.
+   The helper writes `user_data\config.private.okx.json` and asks OKX (read-only) to confirm the key.
+   It warns about withdrawals, a missing IP binding, the account mode, and USDT left in the wrong account.
+3. Move your USDT from the **Funding** account to the **Trading** account (Assets → Transfer).
+   Deposits land in Funding, and the bot only sees Trading. Spot mode is the simplest account mode
+   for this bot (Assets → Trading account → Account mode).
+4. Start the live bot and type `LIVE` when prompted:
+
+   ```cmd
+   powershell -ExecutionPolicy Bypass -File scripts\live-trade.ps1 -Exchange okx
+   ```
+
+5. Watch the first live trade. Right after the buy fills, the log should show a stop-loss order
+   being placed. If it says `Unable to place a stoploss order on exchange`, the bot either sells the
+   position at once as a safety measure or keeps retrying, depending on the error. Either way, stop
+   the bot and report the error before running it again.
+   OKX stop-losses go through a different order route than Binance's, and that route could not
+   be tested without a live key.
+
+OKX live trades are kept in `user_data\tradesv3.live.<Strategy>.okx.sqlite`.
+
 ## Backtesting and research
 
 ```cmd
@@ -168,11 +218,15 @@ powershell -ExecutionPolicy Bypass -File scripts\update-data.ps1                
 powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1                       :: TrendRider, Mar 2024 to now, at its configured capital
 powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1 -Capital 1000         :: same, pretending you had 1000 USDT
 powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1 -Strategy FlashCrashScalper -Timerange 20260101-
+powershell -ExecutionPolicy Bypass -File scripts\update-data.ps1 -Exchange okx -Pairs "BTC/USDT,ETH/USDT" -SkipScalping
+powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1 -Exchange okx                :: same backtest on OKX prices
 .venv\Scripts\python.exe research\signal_study.py --timeframe 15m --horizons 4 16 48
 .venv\Scripts\python.exe research\trend_study.py
 ```
 
-Research scripts use the coins in `config.json` by default; add `--pairs BTC/USDT ETH/USDT` to narrow
+OKX sends only 100 historic candles per request. The 1h/4h/1d download for two coins takes under
+a minute, but a first OKX download of 5-minute candles for all 20 coins takes a long time.
+Research scripts read Binance data only. They use the coins in `config.json` by default; add `--pairs BTC/USDT ETH/USDT` to narrow
 them or `--per-pair` to see every coin. Before trusting a change, check it on **all coins** and on
 data it was **not tuned on**. Small tweaks that only improve one backtest are usually overfitting.
 
@@ -182,11 +236,14 @@ data it was **not tuned on**. Small tweaks that only improve one backtest are us
 |---|---|
 | `user_data/strategies/TrendRider.py` | Main strategy |
 | `user_data/strategies/CrashReversal.py`, `FlashCrashScalper.py` | Experimental crash-rebound strategies |
-| `user_data/config.json` | Shared settings: coin list, pricing, paper mode by default |
+| `user_data/config.json` | Shared settings: coin list, pricing, paper mode by default, Binance |
+| `user_data/config.okx.json` | Switches a bot to OKX: spot markets only, 0.1% paper-trading fee |
 | `user_data/config.<Strategy>.json` | Per-bot settings: capital, slots, slice weights, dashboard port |
+| `user_data/config.<Strategy>.okx.json` | OKX overrides for that bot: name, dashboard port, optional capital |
 | `user_data/config.live.json` | Turns real orders on (used only by `live-trade.ps1`) |
-| `user_data/config.private.example.json` | Template for API keys, dashboard and Telegram secrets |
-| `scripts/` | Paper trade, live trade, backtest, data update, key setup and check |
+| `user_data/config.private.example.json` | Template for the Binance key, dashboard and Telegram secrets |
+| `user_data/config.private.okx.example.json` | Template for the OKX key, secret and passphrase |
+| `scripts/` | Paper trade, live trade, backtest, data update, key setup and check for both exchanges |
 | `research/` | Signal and trend studies, rejected strategies |
 | `.venv/` | Python 3.12 environment with Freqtrade |
 
@@ -194,4 +251,4 @@ data it was **not tuned on**. Small tweaks that only improve one backtest are us
 
 Any small Linux VPS (1 vCPU, 1–2 GB RAM) is enough; Freqtrade's official Docker image is the easiest
 route. Copy `user_data/` (without `data/` and the `.sqlite` files) and run the same strategy and
-config files. A server has a fixed IP, which also makes Binance's IP restriction painless.
+config files. A server has a fixed IP, which also makes the Binance and OKX IP restrictions painless.
