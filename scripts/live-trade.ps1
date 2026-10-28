@@ -1,8 +1,8 @@
 # Trades one strategy with REAL money. Paper trade first (scripts\paper-trade.ps1).
 #
-#   scripts\live-trade.ps1                                   # TrendRider on Binance
+#   scripts\live-trade.ps1                                   # TrendRider on OKX
 #   scripts\live-trade.ps1 -Strategy FlashCrashScalper
-#   scripts\live-trade.ps1 -Exchange okx                     # TrendRider on OKX
+#   scripts\live-trade.ps1 -Exchange binance                 # TrendRider on Binance
 #
 # Each bot has its own capital: "available_capital" in user_data\config.<Strategy>.json
 # (or config.<Strategy>.okx.json for OKX) is the most USDT that bot may use. If you run
@@ -10,7 +10,7 @@
 # USDT balance there.
 param(
     [string]$Strategy = "TrendRider",
-    [ValidateSet("binance", "okx")][string]$Exchange = "binance"
+    [ValidateSet("binance", "okx")][string]$Exchange = "okx"
 )
 
 $ErrorActionPreference = "Stop"

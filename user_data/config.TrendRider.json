@@ -1,10 +1,11 @@
 {
     "bot_name": "trend-rider",
-    "max_open_trades": 2,
-    "available_capital": 100,
+    "max_open_trades": 6,
+    "available_capital": 300,
     "exchange": {
-        "pair_whitelist": ["BTC/USDT", "ETH/USDT"]
+        "pair_whitelist": ["BTC/USDT", "ETH/USDT", "XRP/USDT", "SOL/USDT", "DOGE/USDT", "TRX/USDT"]
     },
+    "pair_weights": { "BTC/USDT": 0.30, "ETH/USDT": 0.20 },
     "api_server": {
         "listen_port": 8080
     }

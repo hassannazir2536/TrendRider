@@ -1,7 +1,7 @@
 # Analyzer & Trader
 
 Automated **spot** trading bots for **Binance** and **OKX**, built on [Freqtrade](https://www.freqtrade.io) 2026.9.
-The main bot trades BTC and ETH by default and can be widened to 20 large coins. No leverage, no shorting.
+The main bot trades the six largest coins by default and can be narrowed to BTC + ETH or widened to 20. No leverage, no shorting.
 
 > **Risk warning:** No strategy is guaranteed to make money. Backtests describe the past,
 > not the future. Only trade money you can afford to lose.
@@ -15,7 +15,7 @@ The main bot trades BTC and ETH by default and can be widened to 20 large coins.
 | **FlashCrashScalper** | Buys a coin that fell >5% in 2h, sells 6h later (5-minute candles). | **Experimental.** Paper trading only. |
 
 Each strategy runs as its own bot with its own capital, dashboard port and settings file
-(`user_data/config.<Strategy>.json`), on Binance by default or on OKX with `-Exchange okx`. You can
+(`user_data/config.<Strategy>.json`), on OKX by default or on Binance with `-Exchange binance`. You can
 run the same strategy on both exchanges at once; they are separate bots with separate money.
 All three keep a stop-loss order on the exchange so positions stay protected if your PC goes offline.
 
@@ -31,14 +31,24 @@ looked at while designing the strategies.
 
 | Coins | Mar 2024 – Dec 2025 | Jan – Oct 2026 (unseen) | Worst drawdown | Buy & hold of same coins |
 |---|---|---|---|---|
-| **BTC + ETH, 50/50 (default, 100 USDT)** | **+58%** | **+20%** | −32% / −21% | +15% / −15% |
+| **Top 6, tiered (default, 300 USDT)** | **+72%** | **+7%** | −32% / −19% | |
+| BTC + ETH, 50/50 | +58% | +20% | −32% / −21% | +15% / −15% |
+| Top 4, tiered | +78% | +8% | −36% / −23% | |
+| Top 10, tiered | +63% | +5% | −31% / −22% | |
 | Top 10, equal slices | +59% | −2% | −29% / −28% | +16% / −20% |
 | All 20, equal slices | +18% | +4% | −34% / −25% | −13% / −5% |
-| All 20, tiered slices (needs ~300 USDT) | +31% | +9% | −28% / −21% | −13% / −5% |
+| All 20, tiered slices | +31% | +9% | −28% / −21% | −13% / −5% |
 
-Tiered slices: BTC 25%, ETH 15%, each other coin 3.3% (set with `pair_weights`, see "Capital" below).
+Top 6 = BTC, ETH, XRP, SOL, DOGE, TRX, the largest coins by market value, chosen by size rather than by
+past results. Tiered slices give BTC 30% and ETH 20% of the money; the other coins share the rest
+equally (set with `pair_weights`). The 20-coin tiered row used BTC 25%, ETH 15%, others 3.3% each.
 
-**On OKX prices** the default BTC + ETH bot made the same 50 trades: +57.7% and +19.6%, with
+Why Top 6 is the default: over the whole period it earned about the same as BTC + ETH (+84% vs +89%)
+with the same worst drop, while spreading the money over six coins and trading about three times as
+often. In 2026 alone it did worse (+7% vs +20%), because altcoins were weaker than BTC this year.
+Sets with 8 or more coins earned less in both periods.
+
+**On OKX prices** the BTC + ETH bot made the same 50 trades: +57.7% and +19.6%, with
 drawdowns within 0.2 points of Binance. Both exchanges charge 0.1% per side at the regular tier,
 and their BTC and ETH prices move together, so the exchange does not change the result.
 
@@ -86,15 +96,16 @@ Earlier 5m/15m strategies that lost 65–73% are kept in
 
 ## Quick start: paper trading (do this first)
 
-Paper trading uses live Binance prices with simulated money and sends no real orders. Open one
-Command Prompt window per strategy you want to run and leave them open:
+Paper trading uses live exchange prices with simulated money and sends no real orders. The scripts
+use **OKX by default**; add `-Exchange binance` to any of them for Binance. Open one Command Prompt
+window per bot you want to run and leave them open:
 
 ```cmd
 cd /d "C:\path\to\TrendRider"
 powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1
 powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1 -Strategy CrashReversal
 powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1 -Strategy FlashCrashScalper
-powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1 -Exchange okx
+powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1 -Exchange binance
 ```
 
 After changing any config file, stop the bot with `Ctrl+C` and start it again so it picks up the change.
@@ -121,33 +132,27 @@ below ~5–10 USDT, so slices smaller than that are skipped automatically.
 
 | Bot | Default capital | Minimum that makes sense | Why |
 |---|---|---|---|
-| TrendRider (BTC + ETH, default) | 100 | ~20 USDT | each half must be ≥ ~7 USDT |
+| TrendRider (Top 6, tiered, default) | 300 | ~100 USDT | 12.5% alt slices must be ≥ ~7 USDT |
+| TrendRider (BTC + ETH) | — | ~20 USDT | each half must be ≥ ~7 USDT |
 | TrendRider (20 coins, tiered) | — | ~300 USDT | 3.3% alt slices must be ≥ 10 USDT |
 | CrashReversal | 200 | ~200 USDT | 20 slots × 5% must be ≥ 10 USDT |
 | FlashCrashScalper | 200 | ~200 USDT | same |
 
 If you run several bots at once, the sum of their `available_capital` must not exceed your USDT balance.
-With 100 USDT, run **TrendRider only**: the crash bots cannot trade with less than ~200 USDT.
+With 300 USDT, run **TrendRider only**, or lower its `available_capital` to make room for a crash bot.
 
 Binance and OKX are separate wallets. An OKX bot uses the same `available_capital` as its Binance
 twin unless you set a different one in `user_data/config.<Strategy>.okx.json`, for example
-`"available_capital": 50`. Running TrendRider on both exchanges doubles your exposure to the same two
+`"available_capital": 50`. Running TrendRider on both exchanges doubles your exposure to the same
 coins; it is not diversification. Pick one exchange unless you have a reason to use both.
 
 If a slice is too small, TrendRider pauses that coin until the next hour and logs once:
 `NEAR/USDT: buy signal skipped, slice 3.33 USDT < Binance minimum 6.18 USDT`.
 
-**300 USDT or more?** Switch TrendRider to all 20 coins. Replace `user_data\config.TrendRider.json` with:
-
-```json
-{
-    "bot_name": "trend-rider",
-    "max_open_trades": 20,
-    "available_capital": 300,
-    "pair_weights": { "BTC/USDT": 0.25, "ETH/USDT": 0.15 },
-    "api_server": { "listen_port": 8080 }
-}
-```
+**Changing the coins.** Edit `pair_whitelist` and `max_open_trades` (one slot per coin) in
+`user_data\config.TrendRider.json`. For BTC + ETH only, use two coins, `"max_open_trades": 2`, and
+remove `pair_weights`. With less than ~100 USDT, go back to BTC + ETH: smaller alt slices fall below
+the exchange minimum and are skipped.
 
 ## Going live with real money: Binance
 
@@ -171,8 +176,8 @@ If a slice is too small, TrendRider pauses that coin until the next hour and log
 4. Start a live bot and type `LIVE` when prompted:
 
    ```cmd
-   powershell -ExecutionPolicy Bypass -File scripts\live-trade.ps1
-   powershell -ExecutionPolicy Bypass -File scripts\live-trade.ps1 -Strategy CrashReversal
+   powershell -ExecutionPolicy Bypass -File scripts\live-trade.ps1 -Exchange binance
+   powershell -ExecutionPolicy Bypass -File scripts\live-trade.ps1 -Exchange binance -Strategy CrashReversal
    ```
 
 Live trades are kept in `user_data\tradesv3.live.<Strategy>.sqlite`, separate from paper trading.
@@ -199,7 +204,7 @@ Live trades are kept in `user_data\tradesv3.live.<Strategy>.sqlite`, separate fr
 4. Start the live bot and type `LIVE` when prompted:
 
    ```cmd
-   powershell -ExecutionPolicy Bypass -File scripts\live-trade.ps1 -Exchange okx
+   powershell -ExecutionPolicy Bypass -File scripts\live-trade.ps1
    ```
 
 5. Watch the first live trade. Right after the buy fills, the log should show a stop-loss order
@@ -214,18 +219,18 @@ OKX live trades are kept in `user_data\tradesv3.live.<Strategy>.okx.sqlite`.
 ## Backtesting and research
 
 ```cmd
-powershell -ExecutionPolicy Bypass -File scripts\update-data.ps1                    :: fetch latest candles for all 20 coins
-powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1                       :: TrendRider, Mar 2024 to now, at its configured capital
+powershell -ExecutionPolicy Bypass -File scripts\update-data.ps1 -SkipScalping      :: OKX 1h/4h/1d candles for all 20 coins
+powershell -ExecutionPolicy Bypass -File scripts\update-data.ps1 -Exchange binance  :: Binance candles, read by the research scripts
+powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1                       :: TrendRider on OKX prices, Mar 2024 to now
 powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1 -Capital 1000         :: same, pretending you had 1000 USDT
+powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1 -Exchange binance     :: same on Binance prices
 powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1 -Strategy FlashCrashScalper -Timerange 20260101-
-powershell -ExecutionPolicy Bypass -File scripts\update-data.ps1 -Exchange okx -Pairs "BTC/USDT,ETH/USDT" -SkipScalping
-powershell -ExecutionPolicy Bypass -File scripts\backtest.ps1 -Exchange okx                :: same backtest on OKX prices
 .venv\Scripts\python.exe research\signal_study.py --timeframe 15m --horizons 4 16 48
 .venv\Scripts\python.exe research\trend_study.py
 ```
 
-OKX sends only 100 historic candles per request. The 1h/4h/1d download for two coins takes under
-a minute, but a first OKX download of 5-minute candles for all 20 coins takes a long time.
+OKX sends only 100 historic candles per request. The 1h/4h/1d download takes a few minutes, but a
+first OKX download of 5-minute candles (needed only to backtest FlashCrashScalper) takes a long time.
 Research scripts read Binance data only. They use the coins in `config.json` by default; add `--pairs BTC/USDT ETH/USDT` to narrow
 them or `--per-pair` to see every coin. Before trusting a change, check it on **all coins** and on
 data it was **not tuned on**. Small tweaks that only improve one backtest are usually overfitting.
@@ -236,7 +241,7 @@ data it was **not tuned on**. Small tweaks that only improve one backtest are us
 |---|---|
 | `user_data/strategies/TrendRider.py` | Main strategy |
 | `user_data/strategies/CrashReversal.py`, `FlashCrashScalper.py` | Experimental crash-rebound strategies |
-| `user_data/config.json` | Shared settings: coin list, pricing, paper mode by default, Binance |
+| `user_data/config.json` | Shared settings: coin list, pricing, paper mode by default, Binance connection |
 | `user_data/config.okx.json` | Switches a bot to OKX: spot markets only, 0.1% paper-trading fee |
 | `user_data/config.<Strategy>.json` | Per-bot settings: capital, slots, slice weights, dashboard port |
 | `user_data/config.<Strategy>.okx.json` | OKX overrides for that bot: name, dashboard port, optional capital |

@@ -3,15 +3,15 @@
 # sizes the simulated wallet to its available_capital, so results reflect the money the bot
 # would really trade with (slices below the exchange minimum are skipped).
 #
-#   scripts\backtest.ps1                                            # TrendRider on Binance data, Mar 2024 to now
+#   scripts\backtest.ps1                                            # TrendRider on OKX data, Mar 2024 to now
 #   scripts\backtest.ps1 -Strategy FlashCrashScalper -Timerange 20260101-
 #   scripts\backtest.ps1 -Capital 1000                              # pretend you had 1000 USDT
-#   scripts\backtest.ps1 -Exchange okx                              # OKX data (run update-data.ps1 -Exchange okx first)
+#   scripts\backtest.ps1 -Exchange binance                          # Binance data
 param(
     [string]$Strategy = "TrendRider",
     [string]$Timerange = "20240301-",
     [double]$Capital = 0,
-    [ValidateSet("binance", "okx")][string]$Exchange = "binance"
+    [ValidateSet("binance", "okx")][string]$Exchange = "okx"
 )
 
 $ErrorActionPreference = "Stop"

@@ -1,14 +1,14 @@
 # Downloads the latest candles used by backtests and research scripts.
 # Pairs come from pair_whitelist in user_data\config.json unless -Pairs is given.
 #
-#   scripts\update-data.ps1                                         # Binance, all 20 coins
-#   scripts\update-data.ps1 -Exchange okx -Pairs "BTC/USDT,ETH/USDT"
-#   scripts\update-data.ps1 -Exchange okx -Pairs "BTC/USDT,ETH/USDT" -SkipScalping   # only 1h/4h/1d
+#   scripts\update-data.ps1                                         # OKX, all 20 coins
+#   scripts\update-data.ps1 -Pairs "BTC/USDT,ETH/USDT" -SkipScalping  # OKX, two coins, only 1h/4h/1d
+#   scripts\update-data.ps1 -Exchange binance                       # Binance (the research scripts read this)
 #
 # OKX sends only 100 historic candles per request, so a first OKX download of 5-minute
 # candles takes a long time. Later runs only fetch what is new.
 param(
-    [ValidateSet("binance", "okx")][string]$Exchange = "binance",
+    [ValidateSet("binance", "okx")][string]$Exchange = "okx",
     [string]$Pairs = "",
     [switch]$SkipScalping
 )
