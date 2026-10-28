@@ -85,7 +85,7 @@ Paper trading uses live Binance prices with simulated money and sends no real or
 Command Prompt window per strategy you want to run and leave them open:
 
 ```cmd
-cd /d "C:\Users\DELL\source\repos\Analyzer & Trader"
+cd /d "C:\path\to\TrendRider"
 powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1
 powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1 -Strategy CrashReversal
 powershell -ExecutionPolicy Bypass -File scripts\paper-trade.ps1 -Strategy FlashCrashScalper
